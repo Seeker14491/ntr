@@ -1,5 +1,5 @@
 # ntr
 
-A Rust library to interface with [NTR Debugger 2](https://gbatemp.net/threads/release-ntr-debugger-2-with-source-the-first-public-real-time-debugger-for-n3ds.384858/). 
+A Rust library for interfacing with the debugging functionality of [NTR CFW](https://gbatemp.net/threads/release-ntr-cfw-2-2-anti-piracy-region-free-cfw-on-jp-eu-us-aus-new-3ds.385142/). 
 
 This library is in early development and not ready for use.

@@ -4,6 +4,7 @@
 #![feature(read_exact)]
 
 extern crate byteorder;
+extern crate time;
 
 use std::io;
 use std::io::prelude::*;
@@ -11,22 +12,28 @@ use std::net::TcpStream;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
+use std::sync::mpsc;
+use std::sync::mpsc::Receiver;
 use byteorder::{ByteOrder, LittleEndian};
+use time::{Duration, PreciseTime};
 
-#[derive(Debug)]
 pub struct Ntr {
     tcp_stream: TcpStream,
     current_seq: AtomicUsize,
     is_heartbeat_sendable: AtomicBool,
+    read_mem_rx: Receiver<Vec<u8>>,
 }
+unsafe impl Sync for Ntr {} // TODO: fix this properly
 impl Ntr {
     pub fn connect(address: &str) -> io::Result<Arc<Self>> {
         let tcp_stream = try!(TcpStream::connect(&(address.to_owned() + ":8000") as &str));
+        let (read_mem_tx, read_mem_rx) = mpsc::channel();
 
         let ntr = Arc::new(Ntr {
             tcp_stream: tcp_stream,
             current_seq: AtomicUsize::new(1000),
             is_heartbeat_sendable: AtomicBool::new(true),
+            read_mem_rx: read_mem_rx,
         });
 
         // spawn receiver thread
@@ -47,9 +54,9 @@ impl Ntr {
                         let mut data_buf = Vec::with_capacity(data_len);
                         ntr_stream.tcp_stream().read_exact(&mut data_buf[0..data_len]).unwrap();
                         if cmd == 0 {
-                            ntr_stream.set_heartbeat_sendable(true);
+                            ntr_stream.is_heartbeat_sendable().store(true, Ordering::SeqCst);
                         } else if cmd == 9 {
-                            // TODO; handle read mem
+                            read_mem_tx.send(data_buf).unwrap();
                         }
                     }
                 }
@@ -60,8 +67,18 @@ impl Ntr {
         {
             let ntr = ntr.clone();
             thread::spawn(move || {
-                let ntr_stream = NtrStream::new(&ntr);
-                // TODO
+                let mut ntr_stream = NtrStream::new(&ntr);
+                let one_second = Duration::seconds(1);
+                let mut heartbeat_sent_time = PreciseTime::now();
+                ntr_stream.send_heartbeat_packet().unwrap();
+                loop {
+                    if heartbeat_sent_time.to(PreciseTime::now()) >= one_second
+                     && ntr_stream.is_heartbeat_sendable().compare_and_swap(true, false, Ordering::SeqCst) {
+                        ntr_stream.send_heartbeat_packet().unwrap();
+                        heartbeat_sent_time = PreciseTime::now();
+                    }
+                    thread::sleep_ms(100);
+                }
             });
         }
 
@@ -69,6 +86,16 @@ impl Ntr {
     }
 
     pub fn disconnect(self) {}
+
+    pub fn read_mem(&mut self, addr: u32, size: u32, pid: u32) -> Result<Vec<u8>, ()> {
+        let mut ntr_stream = NtrStream::new(&self);
+        try!(ntr_stream.send_read_mem_packet(addr, size, pid).map_err(|_x| ()));
+        self.read_mem_rx.recv().map_err(|_x| ())
+    }
+
+    pub fn write_mem(&mut self, addr: u32, data: Vec<u8>) {
+        unimplemented!();
+    }
 }
 
 #[derive(Debug)]
@@ -138,7 +165,7 @@ impl<'a> NtrStream<'a> {
         &self.tcp_stream
     }
 
-    fn set_heartbeat_sendable(&self, val: bool) {
-        self.is_heartbeat_sendable.store(val, Ordering::SeqCst)
+    fn is_heartbeat_sendable(&self) -> &AtomicBool {
+        &self.is_heartbeat_sendable
     }
 }
