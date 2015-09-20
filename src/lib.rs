@@ -46,12 +46,12 @@ impl Ntr {
                     if let Err(_) = ntr_stream.tcp_stream().read_exact(&mut buf) {
                         break;
                     }
-                    let seq = LittleEndian::read_u32(&buf[4..8]);
+                    //let seq = LittleEndian::read_u32(&buf[4..8]);
                     let cmd = LittleEndian::read_u32(&buf[12..16]);
                     let data_len = LittleEndian::read_u32(&buf[80..84]) as usize;
 
                     if data_len != 0 {
-                        let mut data_buf = Vec::with_capacity(data_len);
+                        let mut data_buf = vec![0u8; data_len];
                         ntr_stream.tcp_stream().read_exact(&mut data_buf[0..data_len]).unwrap();
                         if cmd == 0 {
                             ntr_stream.is_heartbeat_sendable().store(true, Ordering::SeqCst);
@@ -85,15 +85,13 @@ impl Ntr {
         Ok(ntr)
     }
 
-    pub fn disconnect(self) {}
-
-    pub fn read_mem(&mut self, addr: u32, size: u32, pid: u32) -> Result<Vec<u8>, ()> {
+    pub fn read_mem(&self, addr: u32, size: u32, pid: u32) -> Result<Vec<u8>, ()> {
         let mut ntr_stream = NtrStream::new(&self);
         try!(ntr_stream.send_read_mem_packet(addr, size, pid).map_err(|_x| ()));
         self.read_mem_rx.recv().map_err(|_x| ())
     }
 
-    pub fn write_mem(&mut self, addr: u32, data: Vec<u8>) {
+    pub fn write_mem(&self, addr: u32, data: Vec<u8>) {
         unimplemented!();
     }
 }
@@ -113,7 +111,7 @@ impl<'a> NtrStream<'a> {
         }
     }
 
-    fn send_packet(&mut self, packet_type: u32, cmd: u32, args: &Vec<u32>, data_len: u32) -> io::Result<usize> {
+    fn send_packet(&mut self, packet_type: u32, cmd: u32, args: &[u32], data_len: u32) -> io::Result<usize> {
         let mut buf = [0u8; 84];
 
         LittleEndian::write_u32(&mut buf[0..4], 0x12345678);
@@ -133,7 +131,7 @@ impl<'a> NtrStream<'a> {
     }
 
     fn send_write_mem_packet(&mut self, addr: u32, pid: u32, buf: &Vec<u8>) -> io::Result<usize> {
-        let args = &mut vec![0u32; 16];
+        let args = &mut [0u32; 16];
         args[0] = pid;
         args[1] = addr;
         args[2] = buf.len() as u32;
@@ -142,23 +140,23 @@ impl<'a> NtrStream<'a> {
     }
 
     fn send_heartbeat_packet(&mut self) -> io::Result<usize> {
-        self.send_packet(0, 0, &vec![0u32; 16], 0)
+        self.send_packet(0, 0, &[0u32; 16], 0)
     }
 
     fn send_hello_packet(&mut self) -> io::Result<usize> {
-        self.send_packet(0, 3, &vec![0u32; 16], 0)
+        self.send_packet(0, 3, &[0u32; 16], 0)
     }
 
     fn send_reload_packet(&mut self) -> io::Result<usize> {
-        self.send_packet(0, 4, &vec![0u32; 16], 0)
+        self.send_packet(0, 4, &[0u32; 16], 0)
     }
 
     fn send_empty_packet(&mut self, cmd: u32, arg0: u32, arg1: u32, arg2: u32) -> io::Result<usize> {
-        let args = &mut vec![0u32, 16];
+        let mut args = [0u32; 16];
         args[0] = arg0;
         args[1] = arg1;
         args[2] = arg2;
-        self.send_packet(0, cmd, args, 0)
+        self.send_packet(0, cmd, &args, 0)
     }
 
     fn tcp_stream(&mut self) -> &TcpStream {
