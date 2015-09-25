@@ -21,19 +21,19 @@ pub struct Ntr {
     tcp_stream: TcpStream,
     current_seq: AtomicUsize,
     is_heartbeat_sendable: AtomicBool,
-    read_mem_rx: Receiver<Vec<u8>>,
+    mem_read_rx: Receiver<Vec<u8>>,
 }
 unsafe impl Sync for Ntr {} // TODO: fix this properly
 impl Ntr {
     pub fn connect(address: &str) -> io::Result<Arc<Self>> {
         let tcp_stream = try!(TcpStream::connect(&(address.to_owned() + ":8000") as &str));
-        let (read_mem_tx, read_mem_rx) = mpsc::channel();
+        let (mem_read_tx, mem_read_rx) = mpsc::channel();
 
         let ntr = Arc::new(Ntr {
             tcp_stream: tcp_stream,
             current_seq: AtomicUsize::new(1000),
             is_heartbeat_sendable: AtomicBool::new(true),
-            read_mem_rx: read_mem_rx,
+            mem_read_rx: mem_read_rx,
         });
 
         // spawn receiver thread
@@ -46,7 +46,6 @@ impl Ntr {
                     if let Err(_) = ntr_stream.tcp_stream().read_exact(&mut buf) {
                         break;
                     }
-                    //let seq = LittleEndian::read_u32(&buf[4..8]);
                     let cmd = LittleEndian::read_u32(&buf[12..16]);
                     let data_len = LittleEndian::read_u32(&buf[80..84]) as usize;
 
@@ -56,7 +55,7 @@ impl Ntr {
                         if cmd == 0 {
                             ntr_stream.is_heartbeat_sendable().store(true, Ordering::SeqCst);
                         } else if cmd == 9 {
-                            read_mem_tx.send(data_buf).unwrap();
+                            mem_read_tx.send(data_buf).unwrap();
                         }
                     }
                 }
@@ -64,7 +63,7 @@ impl Ntr {
         }
 
         // spawn heartbeat thread
-        {
+        /*{
             let ntr = ntr.clone();
             thread::spawn(move || {
                 let mut ntr_stream = NtrStream::new(&ntr);
@@ -80,19 +79,19 @@ impl Ntr {
                     thread::sleep_ms(100);
                 }
             });
-        }
+        }*/
 
         Ok(ntr)
     }
 
-    pub fn read_mem(&self, addr: u32, size: u32, pid: u32) -> Result<Vec<u8>, ()> {
+    pub fn mem_read(&self, addr: u32, size: u32, pid: u32) -> Result<Vec<u8>, ()> {
         let mut ntr_stream = NtrStream::new(&self);
-        try!(ntr_stream.send_read_mem_packet(addr, size, pid).map_err(|_x| ()));
-        self.read_mem_rx.recv().map_err(|_x| ())
+        try!(ntr_stream.send_mem_read_packet(addr, size, pid).map_err(|_x| ()));
+        self.mem_read_rx.recv().map_err(|_x| ())
     }
 
-    pub fn write_mem(&self, addr: u32, data: Vec<u8>) {
-        unimplemented!();
+    pub fn mem_write(&self, addr: u32, data: &Vec<u8>, pid: u32) -> io::Result<usize> {
+        NtrStream::new(&self).send_mem_write_packet(addr, pid, data)
     }
 }
 
@@ -126,17 +125,17 @@ impl<'a> NtrStream<'a> {
         self.tcp_stream.write(&buf)
     }
 
-    fn send_read_mem_packet(&mut self, addr: u32, size: u32, pid: u32) -> io::Result<usize> {
+    fn send_mem_read_packet(&mut self, addr: u32, size: u32, pid: u32) -> io::Result<usize> {
         self.send_empty_packet(9, pid, addr, size)
     }
 
-    fn send_write_mem_packet(&mut self, addr: u32, pid: u32, buf: &Vec<u8>) -> io::Result<usize> {
+    fn send_mem_write_packet(&mut self, addr: u32, pid: u32, buf: &Vec<u8>) -> io::Result<usize> {
         let args = &mut [0u32; 16];
         args[0] = pid;
         args[1] = addr;
         args[2] = buf.len() as u32;
-        self.send_packet(1, 10, args, args[2])
-            .and(self.tcp_stream.write(buf))
+        try!(self.send_packet(1, 10, args, args[2]));
+        self.tcp_stream.write(buf)
     }
 
     fn send_heartbeat_packet(&mut self) -> io::Result<usize> {
