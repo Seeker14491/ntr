@@ -1,6 +1,6 @@
 [package]
 name = "ntr"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Seeker14491 <seeker14491@gmail.com>"]
 
 [dependencies]
