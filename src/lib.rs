@@ -5,10 +5,12 @@ mod ntr_sender;
 use ntr_sender::NtrSender;
 
 extern crate byteorder;
-use byteorder::{ByteOrder, LittleEndian};
-
 extern crate time;
+extern crate regex;
+
+use byteorder::{ByteOrder, LittleEndian};
 use time::{Duration, PreciseTime};
+use regex::Regex;
 
 use std::mem;
 use std::io;
@@ -22,23 +24,19 @@ use std::sync::mpsc::Receiver;
 pub struct Ntr {
     ntr_sender: Arc<Mutex<NtrSender>>,
     mem_read_rx: Receiver<Vec<u8>>,
+    get_pid_rx: Receiver<String>,
 }
 impl Ntr {
     pub fn connect(addr: &str) -> io::Result<Self> {
         let mut tcp_stream = try!(TcpStream::connect(&(addr.to_owned() + ":8000") as &str));
         let (mem_read_tx, mem_read_rx) = mpsc::channel();
+        let (get_pid_tx, get_pid_rx) = mpsc::channel();
 
-        let ntr = {
-            let ntr_sender = NtrSender::new(tcp_stream.try_clone().unwrap());
-            Ntr {
-                ntr_sender: Arc::new(Mutex::new(ntr_sender)),
-                mem_read_rx: mem_read_rx,
-            }
-        };
+        let ntr_sender = Arc::new(Mutex::new(NtrSender::new(tcp_stream.try_clone().unwrap())));
 
         // spawn heartbeat thread
         {
-            let ntr_sender = ntr.ntr_sender.clone();
+            let ntr_sender = ntr_sender.clone();
             thread::spawn(move || {
                 let one_second = Duration::seconds(1);
                 let mut heartbeat_sent_time = PreciseTime::now();
@@ -58,7 +56,7 @@ impl Ntr {
 
         // spawn receiver thread
         {
-            let ntr_sender = ntr.ntr_sender.clone();
+            let ntr_sender = ntr_sender.clone();
             thread::spawn(move || {
                 let mut buf = [0u8; 84];
                 loop {
@@ -71,6 +69,11 @@ impl Ntr {
                         tcp_stream.read_exact(&mut data_buf[0..data_len]).unwrap();
                         if cmd == 0 {
                             ntr_sender.lock().unwrap().set_is_heartbeat_sendable(true);
+
+                            let msg = String::from_utf8(data_buf).unwrap();
+                            if let Some(_) = msg.find("end of process list.") {
+                                get_pid_tx.send(msg).unwrap();
+                            }
                         } else if cmd == 9 {
                             mem_read_tx.send(data_buf).unwrap();
                         }
@@ -79,7 +82,23 @@ impl Ntr {
             });
         }
 
-        Ok(ntr)
+        Ok(Ntr {
+            ntr_sender: ntr_sender,
+            mem_read_rx: mem_read_rx,
+            get_pid_rx: get_pid_rx,
+        })
+    }
+
+    pub fn get_pid(&mut self, tid: u64) -> Option<u32> {
+        self.ntr_sender.lock().unwrap().send_list_process_packet().unwrap();
+        let msg = self.get_pid_rx.recv().unwrap();
+        let cap = Regex::new(&(r"pid: 0x(\d{8}), pname:[^,]*, tid: ".to_owned() + &format!("{:016x}", tid)))
+            .unwrap()
+            .captures(&msg);
+        match cap {
+            Some(x) => Some(u32::from_str_radix(x.at(1).unwrap(), 16).unwrap()),
+            None => None,
+        }
     }
 
     pub fn mem_read(&mut self, addr: u32, size: u32, pid: u32) -> Result<Vec<u8>, ()> {

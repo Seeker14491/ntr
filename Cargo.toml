@@ -1,8 +1,9 @@
 [package]
 name = "ntr"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Seeker14491 <seeker14491@gmail.com>"]
 
 [dependencies]
 byteorder = "0.3"
 time = "0.1"
+regex = "0.1"

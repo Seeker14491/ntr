@@ -52,6 +52,10 @@ impl NtrSender {
         self.send_packet(0, 4, &[0u32; 16], 0)
     }
 
+    pub fn send_list_process_packet(&mut self) -> io::Result<usize> {
+        self.send_empty_packet(5, 0, 0, 0)
+    }
+
     fn send_packet(&mut self, packet_type: u32, cmd: u32, args: &[u32], data_len: u32) -> io::Result<usize> {
         let mut buf = [0u8; 84];
 
