@@ -11,6 +11,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use time::{Duration, PreciseTime};
 use regex::Regex;
 
+use std::error::Error;
 use std::mem;
 use std::io;
 use std::io::prelude::*;
@@ -31,7 +32,7 @@ impl Ntr {
         let (mem_read_tx, mem_read_rx) = mpsc::channel();
         let (get_pid_tx, get_pid_rx) = mpsc::channel();
 
-        let ntr_sender = Arc::new(Mutex::new(NtrSender::new(tcp_stream.try_clone().unwrap())));
+        let ntr_sender = Arc::new(Mutex::new(NtrSender::new(try!(tcp_stream.try_clone()))));
 
         // spawn heartbeat thread
         {
@@ -88,21 +89,22 @@ impl Ntr {
         })
     }
 
-    pub fn get_pid(&mut self, tid: u64) -> Option<u32> {
-        self.ntr_sender.lock().unwrap().send_list_process_packet().unwrap();
+    pub fn get_pid(&mut self, tid: u64) -> Result<Option<u32>, Box<Error>> {
+        try!(self.ntr_sender.lock().unwrap().send_list_process_packet());
         let msg = self.get_pid_rx.recv().unwrap();
-        let cap = Regex::new(&(r"pid: 0x(\d{8}), pname:[^,]*, tid: ".to_owned() + &format!("{:016x}", tid)))
-            .unwrap()
-            .captures(&msg);
-        match cap {
+        let cap = Regex::new(
+            &(r"pid: 0x(\d{8}), pname:[^,]*, tid: ".to_owned() + &format!("{:016x}", tid)))
+                .unwrap()
+                .captures(&msg);
+        Ok(match cap {
             Some(x) => Some(u32::from_str_radix(x.at(1).unwrap(), 16).unwrap()),
             None => None,
-        }
+        })
     }
 
-    pub fn mem_read(&mut self, addr: u32, size: u32, pid: u32) -> Result<Vec<u8>, ()> {
-        try!(self.ntr_sender.lock().unwrap().send_mem_read_packet(addr, size, pid).map_err(|_x| ()));
-        self.mem_read_rx.recv().map_err(|_x| ())
+    pub fn mem_read(&mut self, addr: u32, size: u32, pid: u32) -> Result<Vec<u8>, Box<Error>> {
+        try!(self.ntr_sender.lock().unwrap().send_mem_read_packet(addr, size, pid));
+        Ok(self.mem_read_rx.recv().unwrap())
     }
 
     pub fn mem_write(&mut self, addr: u32, data: &Vec<u8>, pid: u32) -> io::Result<usize> {
