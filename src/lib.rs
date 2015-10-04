@@ -1,24 +1,24 @@
 #![feature(read_exact)]
 
 mod ntr_sender;
-use ntr_sender::NtrSender;
 
 extern crate byteorder;
-extern crate time;
 extern crate regex;
+extern crate time;
 
-use byteorder::{ByteOrder, LittleEndian};
-use time::{Duration, PreciseTime};
-use regex::Regex;
-
-use std::mem;
 use std::io;
 use std::io::prelude::*;
+use std::mem;
 use std::net::TcpStream;
-use std::thread;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
+use std::thread;
+use byteorder::{ByteOrder, LittleEndian};
+use regex::Regex;
+use time::{Duration, PreciseTime};
+
+use ntr_sender::NtrSender;
 
 pub struct Ntr {
     ntr_sender: Arc<Mutex<NtrSender>>,
