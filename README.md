@@ -28,7 +28,9 @@ fn main() {
     print!("Connected.\n\n");
 
     // get process id using title id
-    let pid = ntr.get_pid(MH_TID).unwrap();
+    let pid = ntr.get_pid(MH_TID)
+        .expect("io error")
+        .expect("pid not found");
 
     // go through a few pointers to get the health address
     let health_address = {

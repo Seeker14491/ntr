@@ -11,7 +11,6 @@ use byteorder::{ByteOrder, LittleEndian};
 use time::{Duration, PreciseTime};
 use regex::Regex;
 
-use std::error::Error;
 use std::mem;
 use std::io;
 use std::io::prelude::*;
@@ -89,7 +88,7 @@ impl Ntr {
         })
     }
 
-    pub fn get_pid(&mut self, tid: u64) -> Result<Option<u32>, Box<Error>> {
+    pub fn get_pid(&mut self, tid: u64) -> io::Result<Option<u32>> {
         try!(self.ntr_sender.lock().unwrap().send_list_process_packet());
         let msg = self.get_pid_rx.recv().unwrap();
         let cap = {
@@ -105,7 +104,7 @@ impl Ntr {
         })
     }
 
-    pub fn mem_read(&mut self, addr: u32, size: u32, pid: u32) -> Result<Vec<u8>, Box<Error>> {
+    pub fn mem_read(&mut self, addr: u32, size: u32, pid: u32) -> io::Result<Vec<u8>> {
         try!(self.ntr_sender.lock().unwrap().send_mem_read_packet(addr, size, pid));
         Ok(self.mem_read_rx.recv().unwrap())
     }
