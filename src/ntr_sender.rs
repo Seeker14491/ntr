@@ -1,4 +1,3 @@
-
 use std::io;
 use std::io::prelude::*;
 use std::net::TcpStream;
@@ -42,14 +41,6 @@ impl NtrSender {
 
     pub fn send_heartbeat_packet(&mut self) -> io::Result<usize> {
         self.send_packet(0, 0, &[0u32; 16], 0)
-    }
-
-    pub fn send_hello_packet(&mut self) -> io::Result<usize> {
-        self.send_packet(0, 3, &[0u32; 16], 0)
-    }
-
-    pub fn send_reload_packet(&mut self) -> io::Result<usize> {
-        self.send_packet(0, 4, &[0u32; 16], 0)
     }
 
     pub fn send_list_process_packet(&mut self) -> io::Result<usize> {

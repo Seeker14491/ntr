@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 #![feature(read_exact)]
 
 mod ntr_sender;
