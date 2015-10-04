@@ -92,10 +92,13 @@ impl Ntr {
     pub fn get_pid(&mut self, tid: u64) -> Result<Option<u32>, Box<Error>> {
         try!(self.ntr_sender.lock().unwrap().send_list_process_packet());
         let msg = self.get_pid_rx.recv().unwrap();
-        let cap = Regex::new(
-            &(r"pid: 0x(\d{8}), pname:[^,]*, tid: ".to_owned() + &format!("{:016x}", tid)))
+        let cap = {
+            let mut re = r"pid: 0x(\d{8}), pname:[^,]*, tid: ".to_owned();
+            re.push_str(&format!("{:016x}", tid));
+            Regex::new(&re)
                 .unwrap()
-                .captures(&msg);
+                .captures(&msg)
+        };
         Ok(match cap {
             Some(x) => Some(u32::from_str_radix(x.at(1).unwrap(), 16).unwrap()),
             None => None,
