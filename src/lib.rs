@@ -41,8 +41,8 @@ impl Ntr {
                 let mut heartbeat_sent_time = PreciseTime::now();
                 loop {
                     let mut ntr_sender = ntr_sender.lock().unwrap();
-                    if heartbeat_sent_time.to(PreciseTime::now()) >= one_second
-                     && ntr_sender.is_heartbeat_sendable() {
+                    if heartbeat_sent_time.to(PreciseTime::now()) >= one_second &&
+                     ntr_sender.is_heartbeat_sendable() {
                         ntr_sender.send_heartbeat_packet().unwrap();
                         heartbeat_sent_time = PreciseTime::now();
                         ntr_sender.set_is_heartbeat_sendable(false);
@@ -63,12 +63,14 @@ impl Ntr {
                     let cmd = LittleEndian::read_u32(&buf[12..16]);
                     let data_len = LittleEndian::read_u32(&buf[80..84]) as usize;
 
+                    if cmd == 0 {
+                        ntr_sender.lock().unwrap().set_is_heartbeat_sendable(true);
+                    }
                     if data_len != 0 {
                         let mut data_buf = vec![0u8; data_len];
                         tcp_stream.read_exact(&mut data_buf[0..data_len]).unwrap();
-                        if cmd == 0 {
-                            ntr_sender.lock().unwrap().set_is_heartbeat_sendable(true);
 
+                        if cmd == 0 {
                             let msg = String::from_utf8(data_buf).unwrap();
                             if let Some(_) = msg.find("end of process list.") {
                                 get_pid_tx.send(msg).unwrap();
