@@ -31,6 +31,8 @@ impl Ntr {
     /// # Examples
     ///
     /// ```no_run
+    /// use ntr::Ntr;
+    ///
     /// let mut ntr = Ntr::connect("192.168.2.247").expect("io error");
     /// ```
     pub fn connect(addr: &str) -> io::Result<Self> {
@@ -104,6 +106,10 @@ impl Ntr {
     /// # Examples
     ///
     /// ```no_run
+    /// use ntr::Ntr;
+    ///
+    /// # let mut ntr: Ntr;
+    /// # unsafe { ntr = std::mem::uninitialized::<Ntr>(); }
     /// let pid = ntr.get_pid(0x0004000000126300u64)
     ///     .expect("io error")
     ///     .expect("pid not found");
