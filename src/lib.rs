@@ -26,6 +26,13 @@ pub struct Ntr {
     get_pid_rx: Receiver<String>,
 }
 impl Ntr {
+    /// Opens a connection to the 3DS with the address `addr`.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let mut ntr = Ntr::connect("192.168.2.247").expect("io error");
+    /// ```
     pub fn connect(addr: &str) -> io::Result<Self> {
         let mut tcp_stream = try!(TcpStream::connect(&(addr.to_owned() + ":8000") as &str));
         let (mem_read_tx, mem_read_rx) = mpsc::channel();
@@ -90,6 +97,17 @@ impl Ntr {
         })
     }
 
+    /// Return the process identifier for the currently running title id `tid`.
+    ///
+    /// You can find a list of title ids for 3DS games at [3dsdb](http://3dsdb.com/).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let pid = ntr.get_pid(0x0004000000126300u64)
+    ///     .expect("io error")
+    ///     .expect("pid not found");
+    /// ```
     pub fn get_pid(&mut self, tid: u64) -> io::Result<Option<u32>> {
         try!(self.ntr_sender.lock().unwrap().send_list_process_packet());
         let msg = self.get_pid_rx.recv().unwrap();
@@ -106,11 +124,19 @@ impl Ntr {
         })
     }
 
+    /// Read a chunk of 3DS memory.
+    ///
+    /// This function reads `size` bytes of 3DS memory starting from address `addr` for the
+    /// process with process id `pid`.
     pub fn mem_read(&mut self, addr: u32, size: u32, pid: u32) -> io::Result<Vec<u8>> {
         try!(self.ntr_sender.lock().unwrap().send_mem_read_packet(addr, size, pid));
         Ok(self.mem_read_rx.recv().unwrap())
     }
 
+    /// Write data to 3DS memory.
+    ///
+    /// This function writes `data` to the 3DS memory starting at address `addr` for the
+    /// process with process id `pid`.
     pub fn mem_write(&mut self, addr: u32, data: &Vec<u8>, pid: u32) -> io::Result<usize> {
         self.ntr_sender.lock().unwrap().send_mem_write_packet(addr, pid, data)
     }
