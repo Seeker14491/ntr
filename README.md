@@ -4,6 +4,8 @@
 
 A Rust library for interfacing with the debugging functionality of [NTR CFW](https://gbatemp.net/threads/release-ntr-cfw-2-2-anti-piracy-region-free-cfw-on-jp-eu-us-aus-new-3ds.385142/). It requires Rust nightly to build.
 
+[Documentation](http://Seeker14491.github.io/ntr/ntr)
+
 ## Example
 
 The following program interfaces with Monster Hunter 4 Ultimate (USA). It sets the large monster's health to 5000, then displays the monster's health every second until its health reaches 0. This program also uses the [byteorder crate](https://crates.io/crates/byteorder).
