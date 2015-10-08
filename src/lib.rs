@@ -51,7 +51,7 @@ impl Ntr {
                 loop {
                     let mut ntr_sender = ntr_sender.lock().unwrap();
                     if heartbeat_sent_time.to(PreciseTime::now()) >= one_second &&
-                     ntr_sender.is_heartbeat_sendable() {
+                       ntr_sender.is_heartbeat_sendable() {
                         ntr_sender.send_heartbeat_packet().unwrap();
                         heartbeat_sent_time = PreciseTime::now();
                         ntr_sender.set_is_heartbeat_sendable(false);

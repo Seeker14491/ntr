@@ -30,7 +30,11 @@ impl NtrSender {
         self.send_empty_packet(9, pid, addr, size)
     }
 
-    pub fn send_mem_write_packet(&mut self, addr: u32, pid: u32, buf: &Vec<u8>) -> io::Result<usize> {
+    pub fn send_mem_write_packet(&mut self,
+                                 addr: u32,
+                                 pid: u32,
+                                 buf: &Vec<u8>)
+                                 -> io::Result<usize> {
         let args = &mut [0u32; 16];
         args[0] = pid;
         args[1] = addr;
@@ -47,7 +51,12 @@ impl NtrSender {
         self.send_empty_packet(5, 0, 0, 0)
     }
 
-    fn send_packet(&mut self, packet_type: u32, cmd: u32, args: &[u32], data_len: u32) -> io::Result<usize> {
+    fn send_packet(&mut self,
+                   packet_type: u32,
+                   cmd: u32,
+                   args: &[u32],
+                   data_len: u32)
+                   -> io::Result<usize> {
         let mut buf = [0u8; 84];
 
         LittleEndian::write_u32(&mut buf[0..4], 0x12345678);
@@ -63,7 +72,12 @@ impl NtrSender {
         self.tcp_stream.write(&buf)
     }
 
-    fn send_empty_packet(&mut self, cmd: u32, arg0: u32, arg1: u32, arg2: u32) -> io::Result<usize> {
+    fn send_empty_packet(&mut self,
+                         cmd: u32,
+                         arg0: u32,
+                         arg1: u32,
+                         arg2: u32)
+                         -> io::Result<usize> {
         let mut args = [0u32; 16];
         args[0] = arg0;
         args[1] = arg1;
