@@ -99,7 +99,7 @@ impl Ntr {
         })
     }
 
-    /// Return the process identifier for the currently running title id `tid`.
+    /// Returns the process identifier for the currently running title id `tid`.
     ///
     /// You can find a list of title ids for 3DS games at [3dsdb](http://3dsdb.com/).
     ///
@@ -130,7 +130,7 @@ impl Ntr {
         })
     }
 
-    /// Read a chunk of 3DS memory.
+    /// Reads a chunk of 3DS memory.
     ///
     /// This function reads `size` bytes of 3DS memory starting from address `addr` for the
     /// process with process id `pid`.
@@ -139,7 +139,7 @@ impl Ntr {
         Ok(self.mem_read_rx.recv().unwrap())
     }
 
-    /// Write data to 3DS memory.
+    /// Writes data to 3DS memory.
     ///
     /// This function writes `data` to the 3DS memory starting at address `addr` for the
     /// process with process id `pid`.
