@@ -1,9 +1,10 @@
 [package]
 name = "ntr"
-version = "0.4.1"
+version = "0.5.0"
 authors = ["Seeker14491 <seeker14491@gmail.com>"]
 
 [dependencies]
+clippy = "*"
 byteorder = "0.3"
 time = "0.1"
 regex = "0.1"

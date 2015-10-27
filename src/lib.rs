@@ -1,4 +1,7 @@
 #![feature(read_exact)]
+#![feature(plugin)]
+
+#![plugin(clippy)]
 
 mod ntr_sender;
 
@@ -108,8 +111,7 @@ impl Ntr {
     /// ```no_run
     /// use ntr::Ntr;
     ///
-    /// # let mut ntr: Ntr;
-    /// # unsafe { ntr = std::mem::uninitialized::<Ntr>(); }
+    /// # let mut ntr: Ntr = unimplemented!();
     /// let pid = ntr.get_pid(0x0004000000126300u64)
     ///     .expect("io error")
     ///     .expect("pid not found");
@@ -124,10 +126,7 @@ impl Ntr {
                 .unwrap()
                 .captures(&msg)
         };
-        Ok(match cap {
-            Some(x) => Some(u32::from_str_radix(x.at(1).unwrap(), 16).unwrap()),
-            None => None,
-        })
+        Ok(cap.and_then(|x| Some(u32::from_str_radix(x.at(1).unwrap(), 16).unwrap())))
     }
 
     /// Reads a chunk of 3DS memory.
@@ -143,7 +142,7 @@ impl Ntr {
     ///
     /// This function writes `data` to the 3DS memory starting at address `addr` for the
     /// process with process id `pid`.
-    pub fn mem_write(&mut self, addr: u32, data: &Vec<u8>, pid: u32) -> io::Result<usize> {
+    pub fn mem_write(&mut self, addr: u32, data: &[u8; 16], pid: u32) -> io::Result<usize> {
         self.ntr_sender.lock().unwrap().send_mem_write_packet(addr, pid, data)
     }
 }

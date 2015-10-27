@@ -33,7 +33,7 @@ impl NtrSender {
     pub fn send_mem_write_packet(&mut self,
                                  addr: u32,
                                  pid: u32,
-                                 buf: &Vec<u8>)
+                                 buf: &[u8; 16])
                                  -> io::Result<usize> {
         let args = &mut [0u32; 16];
         args[0] = pid;
@@ -54,7 +54,7 @@ impl NtrSender {
     fn send_packet(&mut self,
                    packet_type: u32,
                    cmd: u32,
-                   args: &[u32],
+                   args: &[u32; 16],
                    data_len: u32)
                    -> io::Result<usize> {
         let mut buf = [0u8; 84];
@@ -63,8 +63,9 @@ impl NtrSender {
         LittleEndian::write_u32(&mut buf[4..8], self.current_seq);
         LittleEndian::write_u32(&mut buf[8..12], packet_type);
         LittleEndian::write_u32(&mut buf[12..16], cmd);
-        for i in 0..16 {
-            LittleEndian::write_u32(&mut buf[(4 * i + 16)..(4 * i + 20)], args[i]);
+        for (mut i, val) in args.iter().enumerate() {
+            i = 4 * i + 16;
+            LittleEndian::write_u32(&mut buf[i..(i + 4)], *val);
         }
         LittleEndian::write_u32(&mut buf[80..84], data_len);
 
