@@ -33,7 +33,7 @@ impl NtrSender {
     pub fn send_mem_write_packet(&mut self,
                                  addr: u32,
                                  pid: u32,
-                                 buf: &[u8; 16])
+                                 buf: &[u8])
                                  -> io::Result<usize> {
         let args = &mut [0u32; 16];
         args[0] = pid;
