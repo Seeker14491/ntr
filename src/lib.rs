@@ -1,3 +1,62 @@
+//! ## Example
+//!
+//! The following program interfaces with Monster Hunter 4 Ultimate (USA). It sets the large
+//! monster's health to 5000, then displays the monster's health every second until its health
+//! reaches 0. This program also uses the [byteorder crate](https://crates.io/crates/byteorder).
+//!
+//! ```no_run
+//! extern crate ntr;
+//! extern crate byteorder;
+//!
+//! use std::thread;
+//! use ntr::Ntr;
+//! use byteorder::{ByteOrder, LittleEndian};
+//!
+//! // ip of N3DS to connect to
+//! const N3DS_IP: &'static str = "192.168.2.247";
+//!
+//! // title id for Monster Hunter 4 Ultimate (USA); list can be found at http://3dsdb.com/
+//! const MH_TID: u64 = 0x0004000000126300;
+//!
+//! fn main() {
+//!     println!("Connecting to {}", N3DS_IP);
+//!     let mut ntr = Ntr::connect(N3DS_IP).unwrap();
+//!     print!("Connected.\n\n");
+//!
+//!     // get process id using title id
+//!     let pid = ntr.get_pid(MH_TID)
+//!         .expect("io error")
+//!         .expect("pid not found");
+//!
+//!     // go through a few pointers to get the health address
+//!     let health_address = {
+//!         let p = LittleEndian::read_u32(&ntr.mem_read(0x081C7D00, 4, pid).unwrap());
+//!         LittleEndian::read_u32(&ntr.mem_read(p + 0xE28, 4, pid).unwrap()) + 0x3E8
+//!     };
+//!
+//!     // set monster's health to 5000
+//!     {
+//!         let buf = &mut vec![0u8; 4];
+//!         LittleEndian::write_u32(buf, 5000);
+//!         ntr.mem_write(health_address, buf, pid).unwrap();
+//!     }
+//!
+//!
+//!     // monster health printing
+//!     loop {
+//!         let health = LittleEndian::read_u32(&ntr.mem_read(health_address, 4, pid).unwrap());
+//!         if health > 0 {
+//!             println!("First monster's health: {}\n", health);
+//!             thread::sleep_ms(1000);
+//!         } else {
+//!             println!("First monster is dead!");
+//!             break;
+//!         }
+//!
+//!     }
+//! }
+//! ```
+
 #![feature(read_exact)]
 #![feature(plugin)]
 
@@ -142,7 +201,7 @@ impl Ntr {
     ///
     /// This function writes `data` to the 3DS memory starting at address `addr` for the
     /// process with process id `pid`.
-    pub fn mem_write(&mut self, addr: u32, data: &[u8; 16], pid: u32) -> io::Result<usize> {
+    pub fn mem_write(&mut self, addr: u32, data: &[u8], pid: u32) -> io::Result<usize> {
         self.ntr_sender.lock().unwrap().send_mem_write_packet(addr, pid, data)
     }
 }
