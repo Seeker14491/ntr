@@ -84,7 +84,7 @@ use ntr_sender::NtrSender;
 
 pub struct Ntr {
     ntr_sender: Arc<Mutex<NtrSender>>,
-    mem_read_rx: Receiver<Vec<u8>>,
+    mem_read_rx: Receiver<Box<[u8]>>,
     get_pid_rx: Receiver<String>,
 }
 impl Ntr {
@@ -138,13 +138,13 @@ impl Ntr {
                         ntr_sender.lock().unwrap().set_is_heartbeat_sendable(true);
                     }
                     if data_len != 0 {
-                        let mut data_buf = vec![0u8; data_len];
-                        tcp_stream.read_exact(&mut data_buf[0..data_len]).unwrap();
+                        let mut data_buf = vec![0u8; data_len].into_boxed_slice();
+                        tcp_stream.read_exact(&mut data_buf).unwrap();
 
                         if cmd == 0 {
-                            let msg = String::from_utf8(data_buf).unwrap();
+                            let msg = String::from_utf8_lossy(&data_buf);
                             if let Some(_) = msg.find("end of process list.") {
-                                get_pid_tx.send(msg).unwrap();
+                                get_pid_tx.send(msg.into_owned()).unwrap();
                             }
                         } else if cmd == 9 {
                             mem_read_tx.send(data_buf).unwrap();
@@ -192,7 +192,7 @@ impl Ntr {
     ///
     /// This function reads `size` bytes of 3DS memory starting from address `addr` for the
     /// process with process id `pid`.
-    pub fn mem_read(&mut self, addr: u32, size: u32, pid: u32) -> io::Result<Vec<u8>> {
+    pub fn mem_read(&mut self, addr: u32, size: u32, pid: u32) -> io::Result<Box<[u8]>> {
         try!(self.ntr_sender.lock().unwrap().send_mem_read_packet(addr, size, pid));
         Ok(self.mem_read_rx.recv().unwrap())
     }
