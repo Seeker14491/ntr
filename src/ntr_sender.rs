@@ -30,11 +30,7 @@ impl NtrSender {
         self.send_empty_packet(9, pid, addr, size)
     }
 
-    pub fn send_mem_write_packet(&mut self,
-                                 addr: u32,
-                                 pid: u32,
-                                 buf: &[u8])
-                                 -> io::Result<usize> {
+    pub fn send_mem_write_packet(&mut self, addr: u32, pid: u32, buf: &[u8]) -> io::Result<usize> {
         let args = &mut [0u32; 16];
         args[0] = pid;
         args[1] = addr;

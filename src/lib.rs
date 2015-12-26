@@ -57,31 +57,32 @@
 //! }
 //! ```
 
-#![feature(read_exact)]
+#![warn(missing_copy_implementations, missing_docs,
+    unused_extern_crates, unused_import_braces, unused_qualifications)]
 #![feature(plugin)]
-
 #![plugin(clippy)]
-
-mod ntr_sender;
 
 extern crate byteorder;
 extern crate regex;
 extern crate time;
 
+mod ntr_sender;
+
 use std::io;
 use std::io::prelude::*;
-use std::mem;
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::thread;
+use std::time::Duration;
 use byteorder::{ByteOrder, LittleEndian};
 use regex::Regex;
-use time::{Duration, PreciseTime};
+use time::PreciseTime;
 
 use ntr_sender::NtrSender;
 
+/// A connection to a 3DS.
 pub struct Ntr {
     ntr_sender: Arc<Mutex<NtrSender>>,
     mem_read_rx: Receiver<Box<[u8]>>,
@@ -108,7 +109,7 @@ impl Ntr {
         {
             let ntr_sender = ntr_sender.clone();
             thread::spawn(move || {
-                let one_second = Duration::seconds(1);
+                let one_second = time::Duration::seconds(1);
                 let mut heartbeat_sent_time = PreciseTime::now();
                 loop {
                     let mut ntr_sender = ntr_sender.lock().unwrap();
@@ -118,8 +119,8 @@ impl Ntr {
                         heartbeat_sent_time = PreciseTime::now();
                         ntr_sender.set_is_heartbeat_sendable(false);
                     }
-                    mem::drop(ntr_sender);
-                    thread::sleep_ms(500);
+                    drop(ntr_sender);
+                    thread::sleep(Duration::from_millis(500));
                 }
             });
         }
@@ -181,9 +182,7 @@ impl Ntr {
         let cap = {
             let mut re = r"pid: 0x(\d{8}), pname:[^,]*, tid: ".to_owned();
             re.push_str(&format!("{:016x}", tid));
-            Regex::new(&re)
-                .unwrap()
-                .captures(&msg)
+            Regex::new(&re).unwrap().captures(&msg)
         };
         Ok(cap.and_then(|x| Some(u32::from_str_radix(x.at(1).unwrap(), 16).unwrap())))
     }
