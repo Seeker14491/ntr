@@ -57,7 +57,7 @@
 //! }
 //! ```
 
-#![warn(missing_copy_implementations, missing_docs,
+#![warn(missing_copy_implementations, missing_debug_implementations, missing_docs,
     unused_extern_crates, unused_import_braces, unused_qualifications)]
 #![feature(plugin)]
 #![plugin(clippy)]
@@ -83,6 +83,7 @@ use time::PreciseTime;
 use ntr_sender::NtrSender;
 
 /// A connection to a 3DS.
+#[derive(Debug)]
 pub struct Ntr {
     ntr_sender: Arc<Mutex<NtrSender>>,
     mem_read_rx: Receiver<Box<[u8]>>,
