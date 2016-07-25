@@ -59,8 +59,6 @@
 
 #![warn(missing_copy_implementations, missing_debug_implementations, missing_docs,
     unused_extern_crates, unused_import_braces, unused_qualifications)]
-#![feature(plugin)]
-#![plugin(clippy)]
 
 extern crate byteorder;
 extern crate regex;
