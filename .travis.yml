@@ -1,34 +1,23 @@
 sudo: false
 language: rust
-
-# run builds for all the trains (and more)
 rust:
-  - nightly
-  - beta
-  - stable
-  # minimum supported version
-  - 1.8.0
-
-# load travis-cargo
+- nightly
+- beta
+- stable
+- 1.8.0
 before_script:
-  - |
-      pip install 'travis-cargo<0.2' --user &&
-      export PATH=$HOME/.local/bin:$PATH
-
-# the main build
+- |
+  pip install 'travis-cargo<0.2' --user &&
+  export PATH=$HOME/.local/bin:$PATH
 script:
-  - |
-      travis-cargo build &&
-      travis-cargo test &&
-      travis-cargo bench &&
-      travis-cargo --only stable doc
+- |
+  travis-cargo build &&
+  travis-cargo test &&
+  travis-cargo bench &&
+  travis-cargo --only stable doc
 after_success:
-  # upload the documentation from the build with stable (automatically only actually
-  # runs on the master branch, not individual PRs)
-  - travis-cargo --only stable doc-upload
-
+- travis-cargo --only stable doc-upload
 env:
   global:
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
-    # encrypted github token for doc upload
-    - secure: ms2KT1v5S5+0U+PcxMrFmvZN8C3hY1Lc6pORrMhffTpgU1kr1NmeX5A5ARrR9FiTsxBvFblgEzol5K5DNdn+lPcHKrq/8KYE8d8i+6bx+Rq8vV830wewxq9jxcbz7FHzwr4lQ3BiOHM4yQtrpOm1A5WrVEPXXXpzmDhsakkrCxFuZpZnGVN7GxYZMX1Zr17qJveSDQQmS31Az7Xi0zFRkgCXPq16X5yb3AT3durTmkuzbn3t7rrcrMSYWZwa6N6Eg6EEoqqPTm/l3BL+SR4gBYseLkJSjDL/mBiHML8axdyHU/7D3JrbpsUX4kuJAM76Md/hQ12RN4s0CiSsaF1VaTHzskgYwwk4EHeoMgX+BKPeBsBSqU5yvVtNKds34BE4AmXp7uGIr3ElDDHfl5HFj6KVe4XeFywnc1ntTzpAx9xQTum2oCE9W7cefMfGAEF6ViccKeczyZ+sbAvzP7ZN5Byc2Qffi9jbH8I7Umrov00uXmxUg3XNT8iUmbm1OSx3jJxnHaHUnqMajRqqojeIAiM0Sy3FSZ9s9nBXscrJ5QF6tRFmoOehJYxxvZp+9kV3FlWpQ2se+trp/rUDLnnLb9l2nF9SjO02+WZyTlN0cQH59M5f74iu6iyzFaTAYZqISkwL6pgqCj1zTyXBCFeyx3F6yLH/yyQoEtHVK67T63w=
+  - TRAVIS_CARGO_NIGHTLY_FEATURE=""
+  - secure: CA1F77a8gM55PMui1Hw4tdRAJvucb2H2uMo5lqPFEKM3zxRSd5qOpessOLEEs5ahoUYOLSseXIkptiNnIY8Hf6BRY64t6jNJHS2csgRsVCZDaUWOfdtFnzY62t8Jze7ZNxKKXp8/C382bpSO6KF0xZMUsXBiDfCQVaa4cbaU16Bs6glJCg5+BAGGCwwYfKnstNp1QSxInvwNhkfh49bVuIPHe8V/sGKEaxM/s6ksJpxAg/3GDXVzDUdEQKNUXMidW45gBVQ3i7XJpe00Yodp1hGxZaQodLzS2/lysQSrgxXsyMKW1aDKrCmlJjhOylK1uQEunHH5g7HcKmwZd/oCfGzOwYl8qG+kzlNQNtmctckx9PMBi+MwjvB7eLh4z+Ja0qK/jR6aMygK1al5CoMRonfmLmq2bZv8bUxba6sQAvPvMTLyf5U7iWFtSNWFfFuu1KxEuXNaJu7GPm/hQ3SGmw8HXBxaFM1Wc6VhVPYL9NySXpykWKUz/fKnNu27OF+8rGlYcGsIhrHEder5TkUomGJBBHbzGE7hBj0btjjKXXvQkBOTpxAWRHM2f6+rjPXnO53TDHxHicE9YAsmrAqyqFOvMgNX/CljsSztp77vR0QLfJXmFeLgv0+R1cNj2RkDOR9irqw93ahXf4SAqy72n8DZ+zvSp4q3Tij4IVAzYVw=
