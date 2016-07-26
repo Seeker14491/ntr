@@ -29,6 +29,6 @@ after_success:
 
 env:
   global:
-      TRAVIS_CARGO_NIGHTLY_FEATURE=""
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
     # encrypted github token for doc upload
     - secure: ms2KT1v5S5+0U+PcxMrFmvZN8C3hY1Lc6pORrMhffTpgU1kr1NmeX5A5ARrR9FiTsxBvFblgEzol5K5DNdn+lPcHKrq/8KYE8d8i+6bx+Rq8vV830wewxq9jxcbz7FHzwr4lQ3BiOHM4yQtrpOm1A5WrVEPXXXpzmDhsakkrCxFuZpZnGVN7GxYZMX1Zr17qJveSDQQmS31Az7Xi0zFRkgCXPq16X5yb3AT3durTmkuzbn3t7rrcrMSYWZwa6N6Eg6EEoqqPTm/l3BL+SR4gBYseLkJSjDL/mBiHML8axdyHU/7D3JrbpsUX4kuJAM76Md/hQ12RN4s0CiSsaF1VaTHzskgYwwk4EHeoMgX+BKPeBsBSqU5yvVtNKds34BE4AmXp7uGIr3ElDDHfl5HFj6KVe4XeFywnc1ntTzpAx9xQTum2oCE9W7cefMfGAEF6ViccKeczyZ+sbAvzP7ZN5Byc2Qffi9jbH8I7Umrov00uXmxUg3XNT8iUmbm1OSx3jJxnHaHUnqMajRqqojeIAiM0Sy3FSZ9s9nBXscrJ5QF6tRFmoOehJYxxvZp+9kV3FlWpQ2se+trp/rUDLnnLb9l2nF9SjO02+WZyTlN0cQH59M5f74iu6iyzFaTAYZqISkwL6pgqCj1zTyXBCFeyx3F6yLH/yyQoEtHVK67T63w=
