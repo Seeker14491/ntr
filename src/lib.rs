@@ -10,19 +10,18 @@ extern crate time;
 
 mod ntr_sender;
 
+use byteorder::{ByteOrder, LittleEndian};
+
+use ntr_sender::NtrSender;
+use regex::Regex;
 use std::io;
 use std::io::prelude::*;
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::Duration;
-use byteorder::{ByteOrder, LittleEndian};
-use regex::Regex;
 use time::PreciseTime;
-
-use ntr_sender::NtrSender;
 
 /// A connection to a 3DS.
 #[derive(Debug)]
@@ -43,11 +42,11 @@ impl Connection {
     /// let mut connection = Connection::new("192.168.2.247").expect("io error");
     /// ```
     pub fn new(addr: &str) -> io::Result<Self> {
-        let mut tcp_stream = try!(TcpStream::connect(&(addr.to_owned() + ":8000") as &str));
+        let mut tcp_stream = TcpStream::connect(&(addr.to_owned() + ":8000") as &str)?;
         let (mem_read_tx, mem_read_rx) = mpsc::channel();
         let (get_pid_tx, get_pid_rx) = mpsc::channel();
 
-        let ntr_sender = Arc::new(Mutex::new(NtrSender::new(try!(tcp_stream.try_clone()))));
+        let ntr_sender = Arc::new(Mutex::new(NtrSender::new(tcp_stream.try_clone()?)));
 
         // spawn heartbeat thread
         {
@@ -80,7 +79,10 @@ impl Connection {
                     let data_len = LittleEndian::read_u32(&buf[80..84]) as usize;
 
                     if cmd == 0 {
-                        ntr_sender.lock().unwrap().set_is_heartbeat_sendable(true);
+                        ntr_sender
+                            .lock()
+                            .unwrap()
+                            .set_is_heartbeat_sendable(true);
                     }
                     if data_len != 0 {
                         let mut data_buf = vec![0u8; data_len].into_boxed_slice();
@@ -100,10 +102,10 @@ impl Connection {
         }
 
         Ok(Connection {
-            ntr_sender: ntr_sender,
-            mem_read_rx: mem_read_rx,
-            get_pid_rx: get_pid_rx,
-        })
+               ntr_sender: ntr_sender,
+               mem_read_rx: mem_read_rx,
+               get_pid_rx: get_pid_rx,
+           })
     }
 
     /// Returns the process identifier for the currently running title id `tid`.
@@ -121,14 +123,17 @@ impl Connection {
     ///     .expect("pid not found");
     /// ```
     pub fn get_pid(&mut self, tid: u64) -> io::Result<Option<u32>> {
-        try!(self.ntr_sender.lock().unwrap().send_list_process_packet());
+        self.ntr_sender
+            .lock()
+            .unwrap()
+            .send_list_process_packet()?;
         let msg = self.get_pid_rx.recv().unwrap();
         let cap = {
             let mut re = r"pid: 0x([0-9a-fA-F]{8}), pname:[^,]*, tid: ".to_owned();
             re.push_str(&format!("{:016x}", tid));
             Regex::new(&re).unwrap().captures(&msg)
         };
-        Ok(cap.and_then(|x| Some(u32::from_str_radix(x.at(1).unwrap(), 16).unwrap())))
+        Ok(cap.and_then(|x| Some(u32::from_str_radix(x.get(1).unwrap().as_str(), 16).unwrap())))
     }
 
     /// Reads a chunk of 3DS memory.
@@ -136,7 +141,10 @@ impl Connection {
     /// Reads `size` bytes of 3DS memory starting from address `addr` for the
     /// process with process id `pid`.
     pub fn mem_read(&mut self, addr: u32, size: u32, pid: u32) -> io::Result<Box<[u8]>> {
-        try!(self.ntr_sender.lock().unwrap().send_mem_read_packet(addr, size, pid));
+        self.ntr_sender
+            .lock()
+            .unwrap()
+            .send_mem_read_packet(addr, size, pid)?;
         Ok(self.mem_read_rx.recv().unwrap())
     }
 
@@ -145,37 +153,40 @@ impl Connection {
     /// Writes `data` to the 3DS memory starting at address `addr` for the
     /// process with process id `pid`.
     pub fn mem_write(&mut self, addr: u32, data: &[u8], pid: u32) -> io::Result<usize> {
-        self.ntr_sender.lock().unwrap().send_mem_write_packet(addr, pid, data)
+        self.ntr_sender
+            .lock()
+            .unwrap()
+            .send_mem_write_packet(addr, pid, data)
     }
 
     /// Reads a `u32` from 3DS memory.
     pub fn read_u32(&mut self, addr: u32, pid: u32) -> io::Result<u32> {
-        Ok(LittleEndian::read_u32(&try!(self.mem_read(addr, 4, pid))))
+        Ok(LittleEndian::read_u32(&self.mem_read(addr, 4, pid)?))
     }
 
     /// Reads a `u16` from 3DS memory.
     pub fn read_u16(&mut self, addr: u32, pid: u32) -> io::Result<u16> {
-        Ok(LittleEndian::read_u16(&try!(self.mem_read(addr, 2, pid))))
+        Ok(LittleEndian::read_u16(&self.mem_read(addr, 2, pid)?))
     }
 
     /// Reads a `u8` from 3DS memory.
     pub fn read_u8(&mut self, addr: u32, pid: u32) -> io::Result<u8> {
-        Ok(try!(self.mem_read(addr, 1, pid))[0])
+        Ok(self.mem_read(addr, 1, pid)?[0])
     }
 
     /// Reads an `i32` from 3DS memory.
     pub fn read_i32(&mut self, addr: u32, pid: u32) -> io::Result<i32> {
-        Ok(LittleEndian::read_i32(&try!(self.mem_read(addr, 4, pid))))
+        Ok(LittleEndian::read_i32(&self.mem_read(addr, 4, pid)?))
     }
 
     /// Reads an `i16` from 3DS memory.
     pub fn read_i16(&mut self, addr: u32, pid: u32) -> io::Result<i16> {
-        Ok(LittleEndian::read_i16(&try!(self.mem_read(addr, 2, pid))))
+        Ok(LittleEndian::read_i16(&self.mem_read(addr, 2, pid)?))
     }
 
     /// Reads an `i8` from 3DS memory.
     pub fn read_i8(&mut self, addr: u32, pid: u32) -> io::Result<i8> {
-        Ok(try!(self.mem_read(addr, 1, pid))[0] as i8)
+        Ok(self.mem_read(addr, 1, pid)?[0] as i8)
     }
 
     /// Writes a `u32` to 3DS memory.

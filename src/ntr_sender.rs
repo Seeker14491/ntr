@@ -1,7 +1,7 @@
+use byteorder::{ByteOrder, LittleEndian};
 use std::io;
 use std::io::prelude::*;
 use std::net::TcpStream;
-use byteorder::{ByteOrder, LittleEndian};
 
 #[derive(Debug)]
 pub struct NtrSender {
@@ -35,7 +35,7 @@ impl NtrSender {
         args[0] = pid;
         args[1] = addr;
         args[2] = buf.len() as u32;
-        try!(self.send_packet(1, 10, args, args[2]));
+        self.send_packet(1, 10, args, args[2])?;
         self.tcp_stream.write(buf)
     }
 

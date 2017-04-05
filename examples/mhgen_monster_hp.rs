@@ -4,12 +4,12 @@
 
 extern crate ntr;
 
+use ntr::Connection;
 use std::thread;
 use std::time::Duration;
-use ntr::Connection;
 
 // ip of N3DS to connect to
-const N3DS_IP: &'static str = "192.168.0.12";
+const N3DS_IP: &'static str = "192.168.2.210";
 
 // title id for Monster Hunter Generations (USA); list can be found at http://3dsdb.com/
 const MH_TID: u64 = 0x0004000000187000;
@@ -24,12 +24,15 @@ fn main() {
     print!("Connected.\n\n");
 
     // get process id using title id
-    let pid = connection.get_pid(MH_TID)
+    let pid = connection
+        .get_pid(MH_TID)
         .expect("io error")
         .expect("pid not found");
 
     // go through a pointer to get the health address
     let health_address = connection.read_u32(MONSTER_1_PTR, pid).unwrap() + HEALTH_OFFSET;
+    let initial_health = connection.read_u32(health_address, pid).unwrap();
+    println!("Health address: {:x}\nInitial health: {}", health_address, initial_health);
 
     // set monster's health to 1000
     connection.write_u32(health_address, 1000, pid).unwrap();
